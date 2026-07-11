@@ -428,7 +428,7 @@
     @page{size:A4;margin:10mm;}
   }
 </style>
-<script src="chrome-extension://hmdmhilocobgohohpdpolmibjklfgkbi/pageScript.js"></script></head>
+</head>
 <body>
 
   <div class="toolbar">
@@ -502,49 +502,10 @@
             <th class="del-cell" style="width:26px;"></th>
           </tr>
         </thead>
-        <tbody id="itemsBody"><tr>
-    <td class="no-cell">1</td>
-    <td class="art"><input type="text" class="art-no" placeholder="Art No."></td>
-    <td><input type="number" class="pcs" min="0" step="1" inputmode="numeric" oninput="sanitizeNumberInput(this,false);calcAll()" onkeydown="blockNonNumericKeys(event,false)"></td>
-    <td><input type="number" class="price" min="0" step="0.01" inputmode="decimal" oninput="sanitizeNumberInput(this,true);calcAll()" onkeydown="blockNonNumericKeys(event,true)"></td>
-    <td class="amt-cell"><span class="row-total">0.00</span></td>
-    <td class="del-cell"><button class="del-btn" onclick="delRow(this)">✕</button></td>
-  </tr><tr>
-    <td class="no-cell">2</td>
-    <td class="art"><input type="text" class="art-no" placeholder="Art No."></td>
-    <td><input type="number" class="pcs" min="0" step="1" inputmode="numeric" oninput="sanitizeNumberInput(this,false);calcAll()" onkeydown="blockNonNumericKeys(event,false)"></td>
-    <td><input type="number" class="price" min="0" step="0.01" inputmode="decimal" oninput="sanitizeNumberInput(this,true);calcAll()" onkeydown="blockNonNumericKeys(event,true)"></td>
-    <td class="amt-cell"><span class="row-total">0.00</span></td>
-    <td class="del-cell"><button class="del-btn" onclick="delRow(this)">✕</button></td>
-  </tr><tr>
-    <td class="no-cell">3</td>
-    <td class="art"><input type="text" class="art-no" placeholder="Art No."></td>
-    <td><input type="number" class="pcs" min="0" step="1" inputmode="numeric" oninput="sanitizeNumberInput(this,false);calcAll()" onkeydown="blockNonNumericKeys(event,false)"></td>
-    <td><input type="number" class="price" min="0" step="0.01" inputmode="decimal" oninput="sanitizeNumberInput(this,true);calcAll()" onkeydown="blockNonNumericKeys(event,true)"></td>
-    <td class="amt-cell"><span class="row-total">0.00</span></td>
-    <td class="del-cell"><button class="del-btn" onclick="delRow(this)">✕</button></td>
-  </tr><tr>
-    <td class="no-cell">4</td>
-    <td class="art"><input type="text" class="art-no" placeholder="Art No."></td>
-    <td><input type="number" class="pcs" min="0" step="1" inputmode="numeric" oninput="sanitizeNumberInput(this,false);calcAll()" onkeydown="blockNonNumericKeys(event,false)"></td>
-    <td><input type="number" class="price" min="0" step="0.01" inputmode="decimal" oninput="sanitizeNumberInput(this,true);calcAll()" onkeydown="blockNonNumericKeys(event,true)"></td>
-    <td class="amt-cell"><span class="row-total">0.00</span></td>
-    <td class="del-cell"><button class="del-btn" onclick="delRow(this)">✕</button></td>
-  </tr><tr>
-    <td class="no-cell">5</td>
-    <td class="art"><input type="text" class="art-no" placeholder="Art No."></td>
-    <td><input type="number" class="pcs" min="0" step="1" inputmode="numeric" oninput="sanitizeNumberInput(this,false);calcAll()" onkeydown="blockNonNumericKeys(event,false)"></td>
-    <td><input type="number" class="price" min="0" step="0.01" inputmode="decimal" oninput="sanitizeNumberInput(this,true);calcAll()" onkeydown="blockNonNumericKeys(event,true)"></td>
-    <td class="amt-cell"><span class="row-total">0.00</span></td>
-    <td class="del-cell"><button class="del-btn" onclick="delRow(this)">✕</button></td>
-  </tr><tr>
-    <td class="no-cell">6</td>
-    <td class="art"><input type="text" class="art-no" placeholder="Art No."></td>
-    <td><input type="number" class="pcs" min="0" step="1" inputmode="numeric" oninput="sanitizeNumberInput(this,false);calcAll()" onkeydown="blockNonNumericKeys(event,false)"></td>
-    <td><input type="number" class="price" min="0" step="0.01" inputmode="decimal" oninput="sanitizeNumberInput(this,true);calcAll()" onkeydown="blockNonNumericKeys(event,true)"></td>
-    <td class="amt-cell"><span class="row-total">0.00</span></td>
-    <td class="del-cell"><button class="del-btn" onclick="delRow(this)">✕</button></td>
-  </tr></tbody>
+        <!-- IMPORTANT: tbody left EMPTY on purpose.
+             Rows are generated only by JS (addRow) below.
+             This is what fixes the "1-6 then 1-6 again" duplicate bug. -->
+        <tbody id="itemsBody"></tbody>
       </table>
 
       <div class="add-row-wrap">
@@ -696,6 +657,7 @@ function newBill(){
   rowCount = 0;
   for(let i=0;i<6;i++) addRow();
   calcAll();
+  document.getElementById('billDate').valueAsDate = new Date();
 }
 
 function escapeHtml(str){
@@ -940,12 +902,11 @@ window.addEventListener('afterprint', function(){
   document.getElementById('printRoot').innerHTML = '';
 });
 
+// Page load par sirf EK hi baar rows generate hoti hain,
+// kyunki tbody upar HTML me already khaali hai.
 for(let i=0;i<6;i++) addRow();
 calcAll();
 document.getElementById('billDate').valueAsDate = new Date();
 </script>
-
-<script defer="" src="./index_files/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;7f7b0fd8732c4326aae4b9d58d5c514a&quot;,&quot;server_timing&quot;:{&quot;name&quot;:{&quot;cfCacheStatus&quot;:true,&quot;cfEdge&quot;:true,&quot;cfExtPri&quot;:true,&quot;cfL4&quot;:true,&quot;cfOrigin&quot;:true,&quot;cfSpeedBrain&quot;:true},&quot;location_startswith&quot;:null}}" crossorigin="anonymous"></script>
-
 
 </body></html>
