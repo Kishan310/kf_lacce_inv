@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- saved from url=(0059)https://sheet-to-web-28.preview.emergentagent.com/bill.html -->
 <html lang="hi"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <title>K. F. Enterprise - Bill</title>
@@ -314,18 +313,6 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
-    padding:7px 10px;
-    font-size:12.5px;
-    font-weight:700;
-    color:var(--navy-dark);
-    border:1px solid var(--line);
-    border-radius:4px;
-    background:#F7F9FC;
-  }
-  .amt-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
     padding:5px 10px;
     font-size:12px;
     font-weight:700;
@@ -342,6 +329,8 @@
   .amt-row .gst-rate:focus{outline:none;}
   .amt-row .rate-wrap{font-size:11px;color:var(--muted);font-weight:600;}
   .amt-row span.val{color:var(--navy-dark);}
+  .amt-row.discount-row{background:#FFF8E8;border-color:var(--gold);}
+  .amt-row.discount-row span.val{color:#B03A2E;}
   .net-row{
     display:flex;
     justify-content:space-between;
@@ -424,7 +413,7 @@
       border-radius:0;
     }
     .print-page:last-child{page-break-after:auto;}
-    .band,thead th,.title-row,.net-row,.gst-band{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .band,thead th,.title-row,.net-row,.gst-band,.discount-row{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     @page{size:A4;margin:10mm;}
   }
 </style>
@@ -502,9 +491,6 @@
             <th class="del-cell" style="width:26px;"></th>
           </tr>
         </thead>
-        <!-- IMPORTANT: tbody left EMPTY on purpose.
-             Rows are generated only by JS (addRow) below.
-             This is what fixes the "1-6 then 1-6 again" duplicate bug. -->
         <tbody id="itemsBody"></tbody>
       </table>
 
@@ -550,6 +536,10 @@
         <div class="amt-row">
           <span>AMOUNT</span>
           <span class="val" id="amountVal">0.00</span>
+        </div>
+        <div class="amt-row discount-row">
+          <span>DISCOUNT <span class="rate-wrap">(<input type="number" class="gst-rate" id="discRate" value="0" min="0" max="100" step="1" inputmode="decimal" oninput="sanitizeNumberInput(this,true);clampDisc(this);calcAll()" onkeydown="blockNonNumericKeys(event,true)">%)</span></span>
+          <span class="val" id="discVal">- 0.00</span>
         </div>
         <div class="amt-row">
           <span>S.GST <span class="rate-wrap">(<input type="number" class="gst-rate" id="sgstRate" value="0" min="0" step="0.01" oninput="calcAll()">%)</span></span>
@@ -626,21 +616,44 @@ function renumberRows(){
   rowCount = rows.length;
 }
 
+// Har row ka total paise (2 decimal) tak round hota hai, taaki screen aur print dono me same aaye
+function roundMoney(n){ return Math.round((n + Number.EPSILON) * 100) / 100; }
+
+// Discount box me 100 se upar likha to wahi 100 kar deta hai
+function clampDisc(el){
+  if(parseFloat(el.value) > 100) el.value = '100';
+}
+
+// Discount % ko 0-100 ke beech rakhta hai
+function getDiscRate(){
+  let d = parseFloat(document.getElementById('discRate').value) || 0;
+  if(d < 0) d = 0;
+  if(d > 100) d = 100;
+  return d;
+}
+
 function calcAll(){
   let total = 0;
   document.querySelectorAll('#itemsBody tr').forEach(row=>{
     const pcs = parseFloat(row.querySelector('.pcs').value) || 0;
     const price = parseFloat(row.querySelector('.price').value) || 0;
-    const amt = pcs * price;
+    const amt = roundMoney(pcs * price);
     row.querySelector('.row-total').textContent = amt.toFixed(2);
     total += amt;
   });
+  const discRate = getDiscRate();
   const sgstRate = parseFloat(document.getElementById('sgstRate').value) || 0;
   const igstRate = parseFloat(document.getElementById('igstRate').value) || 0;
-  const sgstAmt = total * sgstRate / 100;
-  const igstAmt = total * igstRate / 100;
-  const net = total + sgstAmt + igstAmt;
+
+  // Discount pehle, phir discounted amount par GST
+  const discAmt = total * discRate / 100;
+  const afterDisc = total - discAmt;
+  const sgstAmt = afterDisc * sgstRate / 100;
+  const igstAmt = afterDisc * igstRate / 100;
+  const net = afterDisc + sgstAmt + igstAmt;
+
   document.getElementById('amountVal').textContent = total.toFixed(2);
+  document.getElementById('discVal').textContent = '- ' + discAmt.toFixed(2);
   document.getElementById('sgstVal').textContent = sgstAmt.toFixed(2);
   document.getElementById('igstVal').textContent = igstAmt.toFixed(2);
   document.getElementById('netAmountVal').textContent = net.toFixed(2);
@@ -653,6 +666,7 @@ function newBill(){
   document.getElementById('custName').value='';
   document.getElementById('custAddr').value='';
   document.getElementById('custGst').value='';
+  document.getElementById('discRate').value='0';
   document.getElementById('itemsBody').innerHTML='';
   rowCount = 0;
   for(let i=0;i<6;i++) addRow();
@@ -733,6 +747,9 @@ function buildTable(rowsChunk, startIndex){
 
 function buildFooterBlock(vals){
   const div = document.createElement('div');
+  const discRow = vals.discRate > 0
+    ? `<div class="amt-row discount-row"><span>DISCOUNT <span class="rate-wrap">(${vals.discRate}%)</span></span><span class="val">- ${vals.discAmt.toFixed(2)}</span></div>`
+    : '';
   div.innerHTML = `
     <div class="foot">
       <div class="foot-left">
@@ -752,6 +769,7 @@ function buildFooterBlock(vals){
       </div>
       <div class="amt-box">
         <div class="amt-row"><span>AMOUNT</span><span class="val">${vals.amountTotal.toFixed(2)}</span></div>
+        ${discRow}
         <div class="amt-row"><span>S.GST <span class="rate-wrap">(${vals.sgstRate}%)</span></span><span class="val">${vals.sgstAmt.toFixed(2)}</span></div>
         <div class="amt-row"><span>I.GST <span class="rate-wrap">(${vals.igstRate}%)</span></span><span class="val">${vals.igstAmt.toFixed(2)}</span></div>
         <div class="net-row"><span>NET AMOUNT :</span><span>${vals.netAmount.toFixed(2)}</span></div>
@@ -785,6 +803,7 @@ function buildPrintPages(){
     bankAcName: document.getElementById('bankAcName').value,
     bankAcNo: document.getElementById('bankAcNo').value,
     bankIfsc: document.getElementById('bankIfsc').value,
+    discRate: getDiscRate(),
     sgstRate: parseFloat(document.getElementById('sgstRate').value) || 0,
     igstRate: parseFloat(document.getElementById('igstRate').value) || 0
   };
@@ -797,16 +816,18 @@ function buildPrintPages(){
     if(art.trim() || pcs || price){
       const pcsNum = parseFloat(pcs) || 0;
       const priceNum = parseFloat(price) || 0;
-      rowsData.push({art, pcs, price, total:(pcsNum*priceNum).toFixed(2)});
+      rowsData.push({art, pcs, price, total:roundMoney(pcsNum*priceNum).toFixed(2)});
     }
   });
   if(rowsData.length === 0){
     rowsData.push({art:'', pcs:'', price:'', total:'0.00'});
   }
   vals.amountTotal = rowsData.reduce((s,r)=> s + parseFloat(r.total), 0);
-  vals.sgstAmt = vals.amountTotal * vals.sgstRate / 100;
-  vals.igstAmt = vals.amountTotal * vals.igstRate / 100;
-  vals.netAmount = vals.amountTotal + vals.sgstAmt + vals.igstAmt;
+  vals.discAmt = vals.amountTotal * vals.discRate / 100;
+  const afterDisc = vals.amountTotal - vals.discAmt;
+  vals.sgstAmt = afterDisc * vals.sgstRate / 100;
+  vals.igstAmt = afterDisc * vals.igstRate / 100;
+  vals.netAmount = afterDisc + vals.sgstAmt + vals.igstAmt;
 
   const probe = document.createElement('div');
   probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:820px;visibility:hidden;';
@@ -902,8 +923,6 @@ window.addEventListener('afterprint', function(){
   document.getElementById('printRoot').innerHTML = '';
 });
 
-// Page load par sirf EK hi baar rows generate hoti hain,
-// kyunki tbody upar HTML me already khaali hai.
 for(let i=0;i<6;i++) addRow();
 calcAll();
 document.getElementById('billDate').valueAsDate = new Date();
