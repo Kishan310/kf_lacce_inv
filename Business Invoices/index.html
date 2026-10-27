@@ -549,6 +549,10 @@
           <span>I.GST <span class="rate-wrap">(<input type="number" class="gst-rate" id="igstRate" value="5" min="0" step="0.01" oninput="calcAll()">%)</span></span>
           <span class="val" id="igstVal">0.00</span>
         </div>
+        <div class="amt-row roundoff-row">
+          <span>ROUND OFF</span>
+          <span class="val" id="roundVal">0.00</span>
+        </div>
         <div class="net-row">
           <span>NET AMOUNT :</span>
           <span id="netAmountVal">0.00</span>
@@ -619,6 +623,20 @@ function renumberRows(){
 // Har row ka total paise (2 decimal) tak round hota hai, taaki screen aur print dono me same aaye
 function roundMoney(n){ return Math.round((n + Number.EPSILON) * 100) / 100; }
 
+// Round off hamesha automatic hai: net amount upar wale poore rupaye me jata hai (123.27 -> 124).
+// Agar kabhi 'paas wala rupaya' chahiye (123.27 -> 123), to neeche 'up' ki jagah 'nearest' likh do.
+const ROUND_MODE = 'up';
+
+// Round off: net amount ko poore rupaye me karta hai.
+// Up = hamesha upar (123.27 -> 124), Nearest = paas wale rupaye (123.27 -> 123, 123.50 -> 124), Off = jaisa hai waisa.
+// Paise (integer) me kaam karta hai taaki 123.00 kabhi galti se 124 na ho.
+function applyRoundOff(net, mode){
+  const cents = Math.round(net * 100);
+  if(mode === 'up') return Math.ceil(cents / 100);
+  if(mode === 'nearest') return Math.round(cents / 100);
+  return cents / 100;
+}
+
 // Discount box me 100 se upar likha to wahi 100 kar deta hai
 function clampDisc(el){
   if(parseFloat(el.value) > 100) el.value = '100';
@@ -650,12 +668,15 @@ function calcAll(){
   const afterDisc = total - discAmt;
   const sgstAmt = afterDisc * sgstRate / 100;
   const igstAmt = afterDisc * igstRate / 100;
-  const net = afterDisc + sgstAmt + igstAmt;
+  const netExact = roundMoney(afterDisc + sgstAmt + igstAmt);
+  const net = applyRoundOff(netExact, ROUND_MODE);
+  const roundAmt = roundMoney(net - netExact);
 
   document.getElementById('amountVal').textContent = total.toFixed(2);
   document.getElementById('discVal').textContent = '- ' + discAmt.toFixed(2);
   document.getElementById('sgstVal').textContent = sgstAmt.toFixed(2);
   document.getElementById('igstVal').textContent = igstAmt.toFixed(2);
+  document.getElementById('roundVal').textContent = (roundAmt < 0 ? '- ' : '+ ') + Math.abs(roundAmt).toFixed(2);
   document.getElementById('netAmountVal').textContent = net.toFixed(2);
 }
 
@@ -750,6 +771,9 @@ function buildFooterBlock(vals){
   const discRow = vals.discRate > 0
     ? `<div class="amt-row discount-row"><span>DISCOUNT <span class="rate-wrap">(${vals.discRate}%)</span></span><span class="val">- ${vals.discAmt.toFixed(2)}</span></div>`
     : '';
+  const roundRow = (vals.roundAmt !== 0)
+    ? `<div class="amt-row roundoff-row"><span>ROUND OFF</span><span class="val">${vals.roundAmt < 0 ? '- ' : '+ '}${Math.abs(vals.roundAmt).toFixed(2)}</span></div>`
+    : '';
   div.innerHTML = `
     <div class="foot">
       <div class="foot-left">
@@ -772,6 +796,7 @@ function buildFooterBlock(vals){
         ${discRow}
         <div class="amt-row"><span>S.GST <span class="rate-wrap">(${vals.sgstRate}%)</span></span><span class="val">${vals.sgstAmt.toFixed(2)}</span></div>
         <div class="amt-row"><span>I.GST <span class="rate-wrap">(${vals.igstRate}%)</span></span><span class="val">${vals.igstAmt.toFixed(2)}</span></div>
+        ${roundRow}
         <div class="net-row"><span>NET AMOUNT :</span><span>${vals.netAmount.toFixed(2)}</span></div>
       </div>
     </div>`;
@@ -827,7 +852,9 @@ function buildPrintPages(){
   const afterDisc = vals.amountTotal - vals.discAmt;
   vals.sgstAmt = afterDisc * vals.sgstRate / 100;
   vals.igstAmt = afterDisc * vals.igstRate / 100;
-  vals.netAmount = afterDisc + vals.sgstAmt + vals.igstAmt;
+  const netExact = roundMoney(afterDisc + vals.sgstAmt + vals.igstAmt);
+  vals.netAmount = applyRoundOff(netExact, ROUND_MODE);
+  vals.roundAmt = roundMoney(vals.netAmount - netExact);
 
   const probe = document.createElement('div');
   probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:820px;visibility:hidden;';
